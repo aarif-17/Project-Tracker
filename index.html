@@ -81,6 +81,22 @@
   .task:hover .t-actions{opacity:1}
   .t-actions button{padding:4px 8px;font-size:12px}
   .status-select{min-width:130px}
+  .cmt-btn{font-size:11px;padding:3px 9px;border-radius:6px;background:var(--panel);border:1px solid var(--line);
+    color:var(--muted);white-space:nowrap;cursor:pointer}
+  .cmt-btn.has{color:var(--accent);border-color:var(--accent)}
+
+  /* Comments thread */
+  .cmt-meta{font-size:12px;color:var(--muted);margin:-6px 0 12px;display:flex;align-items:center;gap:8px}
+  .cmt-meta b{color:var(--text)}
+  .cmt-meta button{padding:3px 8px;font-size:11px}
+  .cmt-list{max-height:46vh;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:12px;padding-right:4px}
+  .cmt{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .cmt-head{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-bottom:4px}
+  .cmt-head b{color:var(--text);font-size:12px}
+  .cmt-head .when{flex:1}
+  .cmt-head .cmt-del{padding:2px 6px;font-size:11px;opacity:0;transition:.12s}
+  .cmt:hover .cmt-del{opacity:1}
+  .cmt-text{font-size:13px;white-space:pre-wrap;word-break:break-word}
 
   /* status colors */
   .s-green{border-left-color:var(--green)} .b-green{background:var(--green-bg);color:#7ee2a8;border:1px solid #2c6e3f}
@@ -194,6 +210,22 @@
   </div>
 </div>
 
+<!-- Comments modal -->
+<div class="modal-bg" id="commentsModal">
+  <div class="modal">
+    <h3 id="cmtTitle">Comments</h3>
+    <div class="cmt-meta">Commenting as <b id="cmtAuthor">…</b>
+      <button class="ghost" onclick="setCommenter()">change name</button></div>
+    <div id="cmtList" class="cmt-list"></div>
+    <div class="row"><textarea id="cmtInput" rows="2" placeholder="Add a comment…  (Ctrl/⌘+Enter to post)"
+        onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter')addComment()"></textarea></div>
+    <div class="actions">
+      <button class="ghost" onclick="closeModal('commentsModal')">Close</button>
+      <button class="primary" onclick="addComment()">Add comment</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const STATUSES = {
   green:{label:'On track', cls:'b-green'},
@@ -241,7 +273,7 @@ const SEED = {
 };
 
 function uid(){return Math.random().toString(36).slice(2,10)}
-function t(name, team, note){return {id:uid(), name, team:team||'Unassigned', note:note||'', status:'gray'}}
+function t(name, team, note){return {id:uid(), name, team:team||'Unassigned', note:note||'', status:'gray', comments:[]}}
 
 let data = JSON.parse(JSON.stringify(SEED));   // placeholder until init() resolves
 
@@ -382,6 +414,7 @@ function taskRow(sec,tk){
     <span class="badge ${st.cls}">${st.label}</span>
     <span class="t-name">${esc(tk.name)}${tk.note?`<span class="note">${esc(tk.note)}</span>`:''}</span>
     <span class="team-tag">👥 ${esc(tk.team)}</span>
+    <button class="cmt-btn${(tk.comments&&tk.comments.length)?' has':''}" onclick="openComments('${sec.id}','${tk.id}')" title="Comments">💬 ${(tk.comments||[]).length}</button>
     <select class="status-select" onchange="setStatus('${sec.id}','${tk.id}',this.value)">${opts}</select>
     <div class="t-actions">
       ${done
@@ -466,6 +499,61 @@ function saveTask(){
   tk.team=document.getElementById('taskTeam').value;
   tk.status=document.getElementById('taskStatus').value;
   closeModal('taskModal');save();render();
+}
+
+/* ----- comments ----- */
+const COMMENTER_KEY = 'initiativeTracker.commenter';
+let commenting = {sid:null, tid:null};
+function getCommenter(){ try{return localStorage.getItem(COMMENTER_KEY)||''}catch(e){return ''} }
+function setCommenter(){
+  const n=prompt('Your name (shown on your comments):', getCommenter());
+  if(n!==null){
+    const v=n.trim()||'Anonymous';
+    try{localStorage.setItem(COMMENTER_KEY,v)}catch(e){}
+    const el=document.getElementById('cmtAuthor'); if(el) el.textContent=v;
+  }
+}
+function openComments(sid,tid){
+  commenting={sid,tid};
+  const tk=findTask(sid,tid); if(!tk) return;
+  if(!Array.isArray(tk.comments)) tk.comments=[];
+  let name=getCommenter();
+  if(!name){ name=(prompt('Your name (shown on your comments):','')||'').trim()||'Anonymous';
+    try{localStorage.setItem(COMMENTER_KEY,name)}catch(e){} }
+  document.getElementById('cmtAuthor').textContent=name;
+  document.getElementById('cmtTitle').textContent='💬 '+tk.name;
+  document.getElementById('cmtInput').value='';
+  renderComments();
+  openModal('commentsModal');
+  setTimeout(()=>document.getElementById('cmtInput').focus(),50);
+}
+function renderComments(){
+  const tk=findTask(commenting.sid,commenting.tid); if(!tk) return;
+  const cs=tk.comments||[];
+  const list=document.getElementById('cmtList');
+  list.innerHTML = cs.length ? cs.map(c=>`
+    <div class="cmt">
+      <div class="cmt-head"><b>${esc(c.author||'Anonymous')}</b>
+        <span class="when">${new Date(c.ts).toLocaleString()}</span>
+        <button class="ghost danger cmt-del" onclick="deleteComment('${c.id}')" title="Delete comment">🗑</button>
+      </div>
+      <div class="cmt-text">${esc(c.text)}</div>
+    </div>`).join('') : '<div class="empty">No comments yet — start the thread.</div>';
+  list.scrollTop=list.scrollHeight;
+}
+function addComment(){
+  const tk=findTask(commenting.sid,commenting.tid); if(!tk) return;
+  const inp=document.getElementById('cmtInput');
+  const text=inp.value.trim(); if(!text) return;
+  if(!Array.isArray(tk.comments)) tk.comments=[];
+  tk.comments.push({id:uid(), author:getCommenter()||'Anonymous', text, ts:Date.now()});
+  inp.value=''; save(); renderComments(); renderBoard(); inp.focus();
+}
+function deleteComment(cid){
+  const tk=findTask(commenting.sid,commenting.tid); if(!tk) return;
+  if(!confirm('Delete this comment?')) return;
+  tk.comments=(tk.comments||[]).filter(c=>c.id!==cid);
+  save(); renderComments(); renderBoard();
 }
 
 /* ----- teams ----- */
