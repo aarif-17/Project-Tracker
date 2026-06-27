@@ -1,0 +1,55 @@
+{
+  "teams": ["Stella", "MCP", "Cloud Intern", "UI Plus", "MC", "XS", "M", "Unassigned"],
+  "sections": [
+    {
+      "id": "sec-stella",
+      "name": "Stella Agent",
+      "collapsed": false,
+      "tasks": [
+        { "id": "stl-1", "name": "Agent DB Session Handling", "team": "Stella", "note": "", "status": "gray" },
+        { "id": "stl-2", "name": "Follow up mechanism", "team": "Stella", "note": "", "status": "gray" },
+        { "id": "stl-3", "name": "Agent execution plan", "team": "Stella", "note": "", "status": "gray" },
+        { "id": "stl-4", "name": "Natural language, non-technical communication", "team": "Stella", "note": "", "status": "gray" },
+        { "id": "stl-5", "name": "System Prompt Engineering", "team": "Stella", "note": "", "status": "gray" },
+        { "id": "stl-6", "name": "Guardrails", "team": "Stella", "note": "", "status": "gray" }
+      ]
+    },
+    {
+      "id": "sec-mcp",
+      "name": "MCP Tools",
+      "collapsed": false,
+      "tasks": [
+        { "id": "mcp-1", "name": "Optimize Description", "team": "MCP", "note": "", "status": "gray" },
+        { "id": "mcp-2", "name": "Authentication", "team": "MC", "note": "MC / XS", "status": "gray" },
+        { "id": "mcp-3", "name": "Accuracy Evaluation pipeline", "team": "MC", "note": "MC / XS", "status": "gray" },
+        { "id": "mcp-4", "name": "Deployment / Publishing / Hosting", "team": "M", "note": "M", "status": "gray" },
+        { "id": "mcp-5", "name": "MC API Tools", "team": "MC", "note": "", "status": "gray" },
+        { "id": "mcp-6", "name": "Organize", "team": "M", "note": "M", "status": "gray" },
+        { "id": "mcp-7", "name": "Standardize", "team": "M", "note": "M", "status": "gray" },
+        { "id": "mcp-8", "name": "Async API", "team": "XS", "note": "XS", "status": "gray" },
+        { "id": "mcp-9", "name": "Permissions / Skills / Workflows", "team": "MCP", "note": "", "status": "gray" }
+      ]
+    },
+    {
+      "id": "sec-cloud",
+      "name": "Cloud Intern",
+      "collapsed": false,
+      "tasks": [
+        { "id": "cld-1", "name": "Proxy Resolve", "team": "M", "note": "M", "status": "gray" },
+        { "id": "cld-2", "name": "G Overhead", "team": "M", "note": "M", "status": "gray" },
+        { "id": "cld-3", "name": "High availability", "team": "M", "note": "M", "status": "gray" },
+        { "id": "cld-4", "name": "Telemetry", "team": "M", "note": "M", "status": "gray" },
+        { "id": "cld-5", "name": "Recording", "team": "M", "note": "M", "status": "gray" },
+        { "id": "cld-6", "name": "Streaming support", "team": "Cloud Intern", "note": "", "status": "gray" }
+      ]
+    },
+    {
+      "id": "sec-ui",
+      "name": "UI Plus",
+      "collapsed": false,
+      "tasks": [
+        { "id": "ui-1", "name": "Login / Set Server", "team": "UI Plus", "note": "", "status": "gray" }
+      ]
+    }
+  ]
+}

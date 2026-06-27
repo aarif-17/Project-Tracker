@@ -1,0 +1,12 @@
+# Netlify configuration for the Initiative Tracker
+# The repo root is a static site — index.html is served directly.
+
+[build]
+  publish = "."
+  command = ""
+
+# Always serve a fresh data.json so "Sync from repo" reflects the latest push.
+[[headers]]
+  for = "/data.json"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
