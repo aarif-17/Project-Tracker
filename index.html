@@ -84,19 +84,24 @@
   .cmt-btn{font-size:11px;padding:3px 9px;border-radius:6px;background:var(--panel);border:1px solid var(--line);
     color:var(--muted);white-space:nowrap;cursor:pointer}
   .cmt-btn.has{color:var(--accent);border-color:var(--accent)}
+  .cmt-btn.open{background:#2a3340;border-color:var(--accent)}
 
-  /* Comments thread */
-  .cmt-meta{font-size:12px;color:var(--muted);margin:-6px 0 12px;display:flex;align-items:center;gap:8px}
-  .cmt-meta b{color:var(--text)}
-  .cmt-meta button{padding:3px 8px;font-size:11px}
-  .cmt-list{max-height:46vh;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:12px;padding-right:4px}
-  .cmt{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
-  .cmt-head{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-bottom:4px}
+  /* Inline comments thread (shown under each task) */
+  .task-wrap{display:flex;flex-direction:column}
+  .task-comments{margin:3px 0 4px 16px;padding:8px 12px;border-left:2px solid var(--line);
+    display:flex;flex-direction:column;gap:7px}
+  .cmt{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+  .cmt-head{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-bottom:3px}
   .cmt-head b{color:var(--text);font-size:12px}
   .cmt-head .when{flex:1}
   .cmt-head .cmt-del{padding:2px 6px;font-size:11px;opacity:0;transition:.12s}
   .cmt:hover .cmt-del{opacity:1}
   .cmt-text{font-size:13px;white-space:pre-wrap;word-break:break-word}
+  .cmt-add{display:flex;gap:6px;align-items:center}
+  .cmt-add input{flex:1}
+  .cmt-add button{padding:5px 11px;font-size:12px}
+  .cmt-as{font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .cmt-as:hover{color:var(--accent)}
 
   /* status colors */
   .s-green{border-left-color:var(--green)} .b-green{background:var(--green-bg);color:#7ee2a8;border:1px solid #2c6e3f}
@@ -206,22 +211,6 @@
     <div class="actions">
       <button class="ghost" onclick="closeModal('taskModal')">Cancel</button>
       <button class="primary" onclick="saveTask()">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- Comments modal -->
-<div class="modal-bg" id="commentsModal">
-  <div class="modal">
-    <h3 id="cmtTitle">Comments</h3>
-    <div class="cmt-meta">Commenting as <b id="cmtAuthor">…</b>
-      <button class="ghost" onclick="setCommenter()">change name</button></div>
-    <div id="cmtList" class="cmt-list"></div>
-    <div class="row"><textarea id="cmtInput" rows="2" placeholder="Add a comment…  (Ctrl/⌘+Enter to post)"
-        onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter')addComment()"></textarea></div>
-    <div class="actions">
-      <button class="ghost" onclick="closeModal('commentsModal')">Close</button>
-      <button class="primary" onclick="addComment()">Add comment</button>
     </div>
   </div>
 </div>
@@ -410,19 +399,42 @@ function taskRow(sec,tk){
   const done = tk.status==='blue';
   const opts=Object.entries(STATUSES).map(([k,v])=>
     `<option value="${k}" ${k===tk.status?'selected':''}>${v.label}</option>`).join('');
-  return `<div class="task s-${tk.status}${done?' done':''}">
-    <span class="badge ${st.cls}">${st.label}</span>
-    <span class="t-name">${esc(tk.name)}${tk.note?`<span class="note">${esc(tk.note)}</span>`:''}</span>
-    <span class="team-tag">👥 ${esc(tk.team)}</span>
-    <button class="cmt-btn${(tk.comments&&tk.comments.length)?' has':''}" onclick="openComments('${sec.id}','${tk.id}')" title="Comments">💬 ${(tk.comments||[]).length}</button>
-    <select class="status-select" onchange="setStatus('${sec.id}','${tk.id}',this.value)">${opts}</select>
-    <div class="t-actions">
-      ${done
-        ? `<button onclick="setStatus('${sec.id}','${tk.id}','green')" title="Reopen">↩ Reopen</button>`
-        : `<button onclick="setStatus('${sec.id}','${tk.id}','blue')" title="Mark done">✓ Resolve</button>`}
-      <button onclick="editTask('${sec.id}','${tk.id}')" title="Edit">✎</button>
-      <button class="danger" onclick="deleteTask('${sec.id}','${tk.id}')" title="Delete">🗑</button>
+  const cs = tk.comments||[];
+  const open = isThreadOpen(tk);
+  const me = esc(getCommenter()||'you');
+  const thread = open ? `
+    <div class="task-comments">
+      ${cs.map(c=>`
+        <div class="cmt">
+          <div class="cmt-head"><b>${esc(c.author||'Anonymous')}</b>
+            <span class="when">${new Date(c.ts).toLocaleString()}</span>
+            <button class="ghost danger cmt-del" onclick="deleteCommentDirect('${sec.id}','${tk.id}','${c.id}')" title="Delete comment">🗑</button>
+          </div>
+          <div class="cmt-text">${esc(c.text)}</div>
+        </div>`).join('')}
+      <div class="cmt-add">
+        <input class="cmt-inline-input" placeholder="Add a comment…"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addInlineComment('${sec.id}','${tk.id}',this)}">
+        <button onclick="addInlineComment('${sec.id}','${tk.id}',this.previousElementSibling)">Comment</button>
+        <span class="cmt-as" onclick="changeName()" title="Change your display name">as ${me} ✎</span>
+      </div>
+    </div>` : '';
+  return `<div class="task-wrap">
+    <div class="task s-${tk.status}${done?' done':''}">
+      <span class="badge ${st.cls}">${st.label}</span>
+      <span class="t-name">${esc(tk.name)}${tk.note?`<span class="note">${esc(tk.note)}</span>`:''}</span>
+      <span class="team-tag">👥 ${esc(tk.team)}</span>
+      <button class="cmt-btn${cs.length?' has':''}${open?' open':''}" onclick="toggleComments('${tk.id}')" title="Show / hide comments">💬 ${cs.length}</button>
+      <select class="status-select" onchange="setStatus('${sec.id}','${tk.id}',this.value)">${opts}</select>
+      <div class="t-actions">
+        ${done
+          ? `<button onclick="setStatus('${sec.id}','${tk.id}','green')" title="Reopen">↩ Reopen</button>`
+          : `<button onclick="setStatus('${sec.id}','${tk.id}','blue')" title="Mark done">✓ Resolve</button>`}
+        <button onclick="editTask('${sec.id}','${tk.id}')" title="Edit">✎</button>
+        <button class="danger" onclick="deleteTask('${sec.id}','${tk.id}')" title="Delete">🗑</button>
+      </div>
     </div>
+    ${thread}
   </div>`;
 }
 
@@ -501,59 +513,47 @@ function saveTask(){
   closeModal('taskModal');save();render();
 }
 
-/* ----- comments ----- */
+/* ----- comments (inline, on the board) ----- */
 const COMMENTER_KEY = 'initiativeTracker.commenter';
-let commenting = {sid:null, tid:null};
+const cmtOverride = new Map();   // tid -> bool (user expand/collapse; default = open if it has comments)
+
 function getCommenter(){ try{return localStorage.getItem(COMMENTER_KEY)||''}catch(e){return ''} }
-function setCommenter(){
-  const n=prompt('Your name (shown on your comments):', getCommenter());
-  if(n!==null){
-    const v=n.trim()||'Anonymous';
-    try{localStorage.setItem(COMMENTER_KEY,v)}catch(e){}
-    const el=document.getElementById('cmtAuthor'); if(el) el.textContent=v;
-  }
-}
-function openComments(sid,tid){
-  commenting={sid,tid};
-  const tk=findTask(sid,tid); if(!tk) return;
-  if(!Array.isArray(tk.comments)) tk.comments=[];
+function ensureCommenter(){
   let name=getCommenter();
   if(!name){ name=(prompt('Your name (shown on your comments):','')||'').trim()||'Anonymous';
     try{localStorage.setItem(COMMENTER_KEY,name)}catch(e){} }
-  document.getElementById('cmtAuthor').textContent=name;
-  document.getElementById('cmtTitle').textContent='💬 '+tk.name;
-  document.getElementById('cmtInput').value='';
-  renderComments();
-  openModal('commentsModal');
-  setTimeout(()=>document.getElementById('cmtInput').focus(),50);
+  return name;
 }
-function renderComments(){
-  const tk=findTask(commenting.sid,commenting.tid); if(!tk) return;
-  const cs=tk.comments||[];
-  const list=document.getElementById('cmtList');
-  list.innerHTML = cs.length ? cs.map(c=>`
-    <div class="cmt">
-      <div class="cmt-head"><b>${esc(c.author||'Anonymous')}</b>
-        <span class="when">${new Date(c.ts).toLocaleString()}</span>
-        <button class="ghost danger cmt-del" onclick="deleteComment('${c.id}')" title="Delete comment">🗑</button>
-      </div>
-      <div class="cmt-text">${esc(c.text)}</div>
-    </div>`).join('') : '<div class="empty">No comments yet — start the thread.</div>';
-  list.scrollTop=list.scrollHeight;
+function changeName(){
+  const n=prompt('Your name (shown on your comments):', getCommenter());
+  if(n!==null){ try{localStorage.setItem(COMMENTER_KEY, n.trim()||'Anonymous')}catch(e){} renderBoard(); }
 }
-function addComment(){
-  const tk=findTask(commenting.sid,commenting.tid); if(!tk) return;
-  const inp=document.getElementById('cmtInput');
-  const text=inp.value.trim(); if(!text) return;
+function findTaskById(tid){
+  for(const s of data.sections){ const f=s.tasks.find(t=>t.id===tid); if(f) return f; }
+  return null;
+}
+function isThreadOpen(tk){
+  if(cmtOverride.has(tk.id)) return cmtOverride.get(tk.id);
+  return (tk.comments||[]).length>0;          // tasks with comments show them by default
+}
+function toggleComments(tid){
+  const tk=findTaskById(tid); if(!tk) return;
+  cmtOverride.set(tid, !isThreadOpen(tk));
+  renderBoard();
+}
+function addInlineComment(sid,tid,inputEl){
+  const text=inputEl.value.trim(); if(!text) return;
+  const tk=findTask(sid,tid); if(!tk) return;
   if(!Array.isArray(tk.comments)) tk.comments=[];
-  tk.comments.push({id:uid(), author:getCommenter()||'Anonymous', text, ts:Date.now()});
-  inp.value=''; save(); renderComments(); renderBoard(); inp.focus();
+  tk.comments.push({id:uid(), author:ensureCommenter(), text, ts:Date.now()});
+  cmtOverride.set(tid, true);                  // keep thread open after posting
+  save(); renderBoard();
 }
-function deleteComment(cid){
-  const tk=findTask(commenting.sid,commenting.tid); if(!tk) return;
+function deleteCommentDirect(sid,tid,cid){
+  const tk=findTask(sid,tid); if(!tk) return;
   if(!confirm('Delete this comment?')) return;
   tk.comments=(tk.comments||[]).filter(c=>c.id!==cid);
-  save(); renderComments(); renderBoard();
+  save(); renderBoard();
 }
 
 /* ----- teams ----- */
