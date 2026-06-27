@@ -4,13 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Initiative Tracker Dashboard</title>
+<script>try{var _t=localStorage.getItem('initiativeTracker.theme');if(_t)document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 <style>
   :root{
-    --bg:#0f1419; --panel:#1a2029; --panel-2:#212935; --line:#2c3645;
+    --bg:#0f1419; --panel:#1a2029; --panel-2:#212935; --line:#2c3645; --hover:#2a3340;
     --text:#e6edf3; --muted:#8b97a7; --accent:#4c8dff;
     --green:#2ea043; --yellow:#d9a40b; --red:#e5484d; --blue:#3b82f6; --gray:#6b7280;
     --green-bg:#16301c; --yellow-bg:#332806; --red-bg:#3a1416; --blue-bg:#10243f; --gray-bg:#23282f;
   }
+  [data-theme="light"]{
+    --bg:#f4f6f9; --panel:#ffffff; --panel-2:#eef1f5; --line:#d8dee6; --hover:#e6ebf2;
+    --text:#1b2430; --muted:#5c6775; --accent:#2f6fed;
+    --green:#1a7f37; --yellow:#b8860b; --red:#d32f37; --blue:#2f6fed; --gray:#8b95a3;
+    --green-bg:#e4f4e9; --yellow-bg:#fbf3da; --red-bg:#fbe4e5; --blue-bg:#e4edfb; --gray-bg:#eaeef3;
+  }
+  [data-theme="light"] .b-green{color:#1a7f37;border-color:#a9d9bb}
+  [data-theme="light"] .b-yellow{color:#9a6f06;border-color:#e3cf8f}
+  [data-theme="light"] .b-red{color:#c0282f;border-color:#eeb0b2}
+  [data-theme="light"] .b-blue{color:#1f5fd6;border-color:#aac6f4}
+  [data-theme="light"] .b-gray{color:#5c6775;border-color:#cdd4dd}
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:var(--bg);color:var(--text);font-size:14px;line-height:1.4}
@@ -21,7 +33,7 @@
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   button{font-family:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel-2);
     color:var(--text);padding:7px 12px;border-radius:7px;cursor:pointer;transition:.12s}
-  button:hover{border-color:var(--accent);background:#2a3340}
+  button:hover{border-color:var(--accent);background:var(--hover)}
   button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
   button.primary:hover{background:#3d7cf0}
   button.ghost{background:transparent}
@@ -109,7 +121,7 @@
   .cmt-btn{font-size:11px;padding:3px 9px;border-radius:6px;background:var(--panel);border:1px solid var(--line);
     color:var(--muted);white-space:nowrap;cursor:pointer}
   .cmt-btn.has{color:var(--accent);border-color:var(--accent)}
-  .cmt-btn.open{background:#2a3340;border-color:var(--accent)}
+  .cmt-btn.open{background:var(--hover);border-color:var(--accent)}
 
   /* Inline comments thread (shown under each task) */
   .task-wrap{display:flex;flex-direction:column}
@@ -162,6 +174,7 @@
     <div class="sub" id="lastSaved">Loading…</div>
   </div>
   <div class="toolbar">
+    <button class="ghost" id="themeBtn" onclick="toggleTheme()" title="Toggle light / dark">🌙 Dark</button>
     <button class="ghost" onclick="collapseAll(true)">Collapse all</button>
     <button class="ghost" onclick="collapseAll(false)">Expand all</button>
     <button onclick="openSectionModal()">+ Section</button>
@@ -254,6 +267,20 @@ const STATUSES = {
   gray:{label:'Not started', cls:'b-gray'},
 };
 const STORE_KEY = 'initiativeTracker.v1';
+const THEME_KEY = 'initiativeTracker.theme';
+
+function applyTheme(t){
+  const light = t==='light';
+  document.documentElement.setAttribute('data-theme', light?'light':'dark');
+  const b=document.getElementById('themeBtn');
+  if(b) b.textContent = light ? '☀️ Light' : '🌙 Dark';
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';
+  const next=cur==='light'?'dark':'light';
+  try{localStorage.setItem(THEME_KEY,next)}catch(e){}
+  applyTheme(next);
+}
 
 const SEED = {
   teams: ['Hcene','Andrei','Jashan','Asim','Alex','Oleksandr','Navreet','Nitesh','Shakshi','Unassigned'],
@@ -319,6 +346,7 @@ async function init(){
     try{ data = await fetchShared(); }
     catch(e){ data = JSON.parse(JSON.stringify(SEED)); }
   }
+  applyTheme((()=>{ try{return localStorage.getItem(THEME_KEY)}catch(e){return null} })() || 'dark');
   render(); save();
 }
 
