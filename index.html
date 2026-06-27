@@ -299,8 +299,14 @@ async function fetchShared(){
 async function init(){
   const raw = (()=>{ try{return localStorage.getItem(STORE_KEY)}catch(e){return null} })();
   if(raw){
-    // Returning visitor: use their local copy.
+    // Returning visitor: use their local copy for tasks/statuses/comments…
     try{ data = JSON.parse(raw); }catch(e){}
+    // …but always refresh the Owner roster from the repo so a pushed owner
+    // list reaches everyone without wiping their local edits.
+    try{
+      const shared = await fetchShared();
+      if(shared && Array.isArray(shared.teams)) data.teams = shared.teams;
+    }catch(e){}
   } else {
     // First visit: pull the shared board from the repo if it's published, else seed.
     try{ data = await fetchShared(); }
