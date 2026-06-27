@@ -183,8 +183,8 @@
 </div>
 
 <div class="filters">
-  <span><label>Team</label>
-    <select id="filterTeam" onchange="render()"><option value="">All teams</option></select>
+  <span><label>Owner</label>
+    <select id="filterTeam" onchange="render()"><option value="">All owners</option></select>
   </span>
   <span><label>Status</label>
     <select id="filterStatus" onchange="render()">
@@ -198,7 +198,7 @@
   </span>
   <span><label>Search</label><input id="filterText" placeholder="Filter tasks…" oninput="render()"></span>
   <div class="spacer"></div>
-  <span><label>Manage teams</label><button class="ghost" onclick="manageTeams()">Edit teams</button></span>
+  <span><label>Manage owners</label><button class="ghost" onclick="manageTeams()">Edit owners</button></span>
 </div>
 
 <main id="board"></main>
@@ -221,7 +221,7 @@
     <h3 id="taskModalTitle">Edit Task</h3>
     <div class="row"><label>Task</label><input id="taskName"></div>
     <div class="row"><label>Notes / detail</label><textarea id="taskNote" rows="2"></textarea></div>
-    <div class="row"><label>Team</label><select id="taskTeam"></select></div>
+    <div class="row"><label>Owner</label><select id="taskTeam"></select></div>
     <div class="row"><label>Status</label>
       <select id="taskStatus">
         <option value="gray">⬤ Not started</option>
@@ -249,37 +249,37 @@ const STATUSES = {
 const STORE_KEY = 'initiativeTracker.v1';
 
 const SEED = {
-  teams: ['Stella','MCP','Cloud Intern','UI Plus','MC','XS','M','Unassigned'],
+  teams: ['Hcene','Andrei','Jashan','Asim','Alex','Oleksandr','Navreet','Nitesh','Shakshi','Unassigned'],
   sections: [
     { id:uid(), name:'Stella Agent', collapsed:false, tasks:[
-      t('Agent DB Session Handling','Stella'),
-      t('Follow up mechanism','Stella'),
-      t('Agent execution plan','Stella'),
-      t('Natural language, non-technical communication','Stella'),
-      t('System Prompt Engineering','Stella'),
-      t('Guardrails','Stella'),
+      t('Agent DB Session Handling'),
+      t('Follow up mechanism'),
+      t('Agent execution plan'),
+      t('Natural language, non-technical communication'),
+      t('System Prompt Engineering'),
+      t('Guardrails'),
     ]},
     { id:uid(), name:'MCP Tools', collapsed:false, tasks:[
-      t('Optimize Description','MCP'),
-      t('Authentication','MC','MC / XS'),
-      t('Accuracy Evaluation pipeline','MC','MC / XS'),
-      t('Deployment / Publishing / Hosting','M','M'),
-      t('MC API Tools','MC'),
-      t('Organize','M','M'),
-      t('Standardize','M','M'),
-      t('Async API','XS','XS'),
-      t('Permissions / Skills / Workflows','MCP'),
+      t('Optimize Description'),
+      t('Authentication',null,'MC / XS'),
+      t('Accuracy Evaluation pipeline',null,'MC / XS'),
+      t('Deployment / Publishing / Hosting',null,'M'),
+      t('MC API Tools'),
+      t('Organize',null,'M'),
+      t('Standardize',null,'M'),
+      t('Async API',null,'XS'),
+      t('Permissions / Skills / Workflows'),
     ]},
     { id:uid(), name:'Cloud Intern', collapsed:false, tasks:[
-      t('Proxy Resolve','M','M'),
-      t('G Overhead','M','M'),
-      t('High availability','M','M'),
-      t('Telemetry','M','M'),
-      t('Recording','M','M'),
-      t('Streaming support','Cloud Intern'),
+      t('Proxy Resolve',null,'M'),
+      t('G Overhead',null,'M'),
+      t('High availability',null,'M'),
+      t('Telemetry',null,'M'),
+      t('Recording',null,'M'),
+      t('Streaming support'),
     ]},
     { id:uid(), name:'UI Plus', collapsed:false, tasks:[
-      t('Login / Set Server','UI Plus'),
+      t('Login / Set Server'),
     ]},
   ]
 };
@@ -375,7 +375,7 @@ function scrollToSection(id){
 function refreshTeamFilter(){
   const sel = document.getElementById('filterTeam');
   const cur = sel.value;
-  sel.innerHTML = '<option value="">All teams</option>' +
+  sel.innerHTML = '<option value="">All owners</option>' +
     data.teams.map(tm=>`<option ${tm===cur?'selected':''}>${esc(tm)}</option>`).join('');
 }
 
@@ -485,7 +485,7 @@ function taskRow(sec,tk){
     <div class="task s-${tk.status}${done?' done':''}">
       <span class="badge ${st.cls}">${st.label}</span>
       <span class="t-name">${esc(tk.name)}${tk.note?`<span class="note">${esc(tk.note)}</span>`:''}</span>
-      <span class="team-tag">👥 ${esc(tk.team)}</span>
+      <span class="team-tag">👤 ${esc(tk.team)}</span>
       <button class="cmt-btn${cs.length?' has':''}${open?' open':''}" onclick="toggleComments('${tk.id}')" title="Show / hide comments">💬 ${cs.length}</button>
       <select class="status-select" onchange="setStatus('${sec.id}','${tk.id}',this.value)">${opts}</select>
       <div class="t-actions">
@@ -621,7 +621,7 @@ function deleteCommentDirect(sid,tid,cid){
 /* ----- teams ----- */
 function manageTeams(){
   const cur=data.teams.join(', ');
-  const n=prompt('Teams (comma separated):',cur);
+  const n=prompt('Owners (comma separated):',cur);
   if(n===null)return;
   const list=n.split(',').map(x=>x.trim()).filter(Boolean);
   if(list.length){if(!list.includes('Unassigned'))list.push('Unassigned');data.teams=list;save();render()}
