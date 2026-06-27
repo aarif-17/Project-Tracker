@@ -39,6 +39,24 @@
   .stat .bar{height:3px;border-radius:3px;margin-top:8px;background:var(--line)}
   .stat.total{border-color:var(--accent)}
 
+  /* Section progress summary */
+  .sec-summary-wrap{padding:0 24px 16px;border-bottom:1px solid var(--line)}
+  .ss-head{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+  .sec-summary{display:flex;gap:10px;flex-wrap:wrap}
+  .ss-card{flex:1;min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;cursor:pointer;transition:.12s}
+  .ss-card:hover{border-color:var(--accent);background:var(--panel-2)}
+  .ss-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+  .ss-name{font-weight:600;font-size:14px}
+  .ss-pct{font-size:13px;color:var(--text);font-weight:700;white-space:nowrap}
+  .ss-bar{height:8px;border-radius:5px;overflow:hidden;display:flex;background:var(--gray-bg);margin-bottom:10px}
+  .ss-bar span{display:block;height:100%}
+  .ss-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .ss-health{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;white-space:nowrap}
+  .ss-counts{display:flex;gap:9px;font-size:11px;color:var(--muted)}
+  .ss-counts i{display:inline-flex;align-items:center;gap:3px;font-style:normal}
+  .ss-counts .dot{width:7px;height:7px}
+
   /* Filters */
   .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 24px;border-bottom:1px solid var(--line);
     background:var(--panel)}
@@ -158,6 +176,11 @@
 </div>
 
 <div class="summary" id="summary"></div>
+
+<div class="sec-summary-wrap">
+  <div class="ss-head">Progress by section</div>
+  <div class="sec-summary" id="secSummary"></div>
+</div>
 
 <div class="filters">
   <span><label>Team</label>
@@ -308,7 +331,45 @@ function save(){
 function render(){
   refreshTeamFilter();
   renderSummary();
+  renderSectionSummary();
   renderBoard();
+}
+
+function sectionHealth(c,total){
+  if(total===0)        return {l:'Empty', cls:'b-gray'};
+  if(c.blue===total)   return {l:'Complete', cls:'b-blue'};
+  if(c.red>0)          return {l:'At risk', cls:'b-red'};
+  if(c.yellow>0)       return {l:'Some risk', cls:'b-yellow'};
+  if(c.green>0)        return {l:'On track', cls:'b-green'};
+  return {l:'Not started', cls:'b-gray'};
+}
+
+function renderSectionSummary(){
+  const el=document.getElementById('secSummary');
+  el.innerHTML = data.sections.map(sec=>{
+    const c={green:0,yellow:0,red:0,blue:0,gray:0};
+    sec.tasks.forEach(tk=>c[tk.status]++);
+    const total=sec.tasks.length;
+    const pct = total? Math.round(c.blue/total*100):0;
+    const seg=(k,col)=> c[k]? `<span style="width:${c[k]/total*100}%;background:${col}" title="${STATUSES[k].label}: ${c[k]}"></span>`:'';
+    const h=sectionHealth(c,total);
+    const ci=(k,col)=> c[k]? `<i title="${STATUSES[k].label}"><span class="dot" style="background:${col}"></span>${c[k]}</i>`:'';
+    return `<div class="ss-card" onclick="scrollToSection('${sec.id}')" title="Jump to ${esc(sec.name)}">
+      <div class="ss-top"><span class="ss-name">${esc(sec.name)}</span><span class="ss-pct">${pct}% done</span></div>
+      <div class="ss-bar">${seg('blue','var(--blue)')}${seg('green','var(--green)')}${seg('yellow','var(--yellow)')}${seg('red','var(--red)')}${seg('gray','var(--gray)')}</div>
+      <div class="ss-foot">
+        <span class="ss-health ${h.cls}">${h.l}</span>
+        <span class="ss-counts">${ci('green','var(--green)')}${ci('yellow','var(--yellow)')}${ci('red','var(--red)')}${ci('blue','var(--blue)')}${ci('gray','var(--gray)')}<i title="Total tasks" style="color:var(--muted)">· ${total} task${total!==1?'s':''}</i></span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function scrollToSection(id){
+  const s=findSection(id);
+  if(s && s.collapsed){ s.collapsed=false; save(); renderBoard(); }
+  const el=document.getElementById('sec-'+id);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function refreshTeamFilter(){
@@ -363,6 +424,7 @@ function renderBoard(){
     const seg=(k,col)=>`<span style="width:${c[k]/total*100}%;background:${col}"></span>`;
 
     const div=document.createElement('div');
+    div.id='sec-'+sec.id;
     div.className='section'+(sec.collapsed?' collapsed':'');
     div.innerHTML=`
       <div class="sec-head" onclick="toggleSection('${sec.id}',event)">
