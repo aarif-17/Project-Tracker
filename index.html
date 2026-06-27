@@ -95,6 +95,13 @@
   .badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;white-space:nowrap}
   .team-tag{font-size:11px;padding:3px 9px;border-radius:6px;background:var(--panel);border:1px solid var(--line);
     color:var(--muted);white-space:nowrap}
+  .t-name-edit{padding:1px 5px;border-radius:4px;cursor:text}
+  .t-name-edit:hover{box-shadow:inset 0 0 0 1px var(--line)}
+  .t-name-edit.editing{background:var(--bg);box-shadow:inset 0 0 0 1px var(--accent);cursor:text}
+  .owner-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap}
+  .owner-select{font-size:11px;padding:3px 6px;border-radius:6px;background:var(--panel);
+    border:1px solid var(--line);color:var(--muted);max-width:130px;cursor:pointer}
+  .owner-select:hover{border-color:var(--accent)}
   .t-actions{display:flex;gap:5px;opacity:0;transition:.12s}
   .task:hover .t-actions{opacity:1}
   .t-actions button{padding:4px 8px;font-size:12px}
@@ -490,8 +497,15 @@ function taskRow(sec,tk){
   return `<div class="task-wrap">
     <div class="task s-${tk.status}${done?' done':''}">
       <span class="badge ${st.cls}">${st.label}</span>
-      <span class="t-name">${esc(tk.name)}${tk.note?`<span class="note">${esc(tk.note)}</span>`:''}</span>
-      <span class="team-tag">👤 ${esc(tk.team)}</span>
+      <span class="t-name"><span class="t-name-edit" title="Double-click to edit"
+          onclick="event.stopPropagation()"
+          ondblclick="startEditTaskName(event,'${sec.id}','${tk.id}')"
+          onkeydown="taskNameKey(event,'${sec.id}','${tk.id}')"
+          onblur="commitTaskName(event,'${sec.id}','${tk.id}')">${esc(tk.name)}</span>${tk.note?`<span class="note">${esc(tk.note)}</span>`:''}</span>
+      <span class="owner-tag" title="Owner">👤
+        <select class="owner-select" onchange="setOwner('${sec.id}','${tk.id}',this.value)">
+          ${(data.teams.includes(tk.team)?data.teams:[tk.team,...data.teams]).map(tm=>`<option ${tm===tk.team?'selected':''}>${esc(tm)}</option>`).join('')}
+        </select></span>
       <button class="cmt-btn${cs.length?' has':''}${open?' open':''}" onclick="toggleComments('${tk.id}')" title="Show / hide comments">💬 ${cs.length}</button>
       <select class="status-select" onchange="setStatus('${sec.id}','${tk.id}',this.value)">${opts}</select>
       <div class="t-actions">
@@ -511,6 +525,27 @@ function findSection(id){return data.sections.find(s=>s.id===id)}
 function findTask(sid,tid){const s=findSection(sid);return s&&s.tasks.find(t=>t.id===tid)}
 
 function setStatus(sid,tid,val){const tk=findTask(sid,tid);if(tk){tk.status=val;save();render()}}
+function setOwner(sid,tid,val){const tk=findTask(sid,tid);if(tk){tk.team=val;save();render()}}
+
+/* inline task-name editing (double-click on the board) */
+function startEditTaskName(e,sid,tid){
+  e.stopPropagation();
+  const span=e.currentTarget;
+  span.contentEditable='true';span.classList.add('editing');span.focus();
+  const r=document.createRange();r.selectNodeContents(span);
+  const sel=getSelection();sel.removeAllRanges();sel.addRange(r);
+}
+function taskNameKey(e,sid,tid){
+  if(e.key==='Enter'){e.preventDefault();e.currentTarget.blur();}
+  else if(e.key==='Escape'){e.preventDefault();e.currentTarget.textContent=findTask(sid,tid).name;e.currentTarget.blur();}
+}
+function commitTaskName(e,sid,tid){
+  const span=e.currentTarget;
+  span.contentEditable='false';span.classList.remove('editing');
+  const v=span.textContent.trim();const tk=findTask(sid,tid);
+  if(v&&v!==tk.name){tk.name=v;save();render();}
+  else{span.textContent=tk.name;}
+}
 function toggleSection(id,e){if(e.target.closest('button'))return;const s=findSection(id);s.collapsed=!s.collapsed;save();renderBoard()}
 function collapseAll(v){data.sections.forEach(s=>s.collapsed=v);save();renderBoard()}
 
