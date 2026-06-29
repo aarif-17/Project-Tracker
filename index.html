@@ -129,6 +129,17 @@
   .cmt-btn.has{color:var(--accent);border-color:var(--accent)}
   .cmt-btn.open{background:var(--hover);border-color:var(--accent)}
 
+  /* Drag-to-rank */
+  .task-wrap[draggable="true"]{cursor:grab}
+  .task-wrap.dragging{opacity:.3;pointer-events:none}
+  .task-wrap.drag-over>.task{outline:2px solid var(--accent);outline-offset:-1px}
+  .t-rank{font-size:11px;font-weight:700;color:var(--muted);min-width:20px;text-align:center;
+    flex-shrink:0;background:var(--panel);border:1px solid var(--line);border-radius:5px;
+    padding:2px 5px;user-select:none}
+  .drag-handle{font-size:16px;color:var(--muted);cursor:grab;flex-shrink:0;opacity:.35;
+    line-height:1;padding:0 2px;user-select:none;transition:.12s}
+  .task:hover .drag-handle{opacity:.85}
+
   /* Inline comments thread (shown under each task) */
   .task-wrap{display:flex;flex-direction:column}
   .task-comments{margin:3px 0 4px 16px;padding:8px 12px;border-left:2px solid var(--line);
@@ -500,7 +511,7 @@ function renderBoard(){
         <button class="ghost danger" onclick="deleteSection('${sec.id}',event)" title="Delete section">🗑</button>
       </div>
       <div class="sec-body">
-        ${visible.length? visible.map(tk=>taskRow(sec,tk)).join('') :
+        ${visible.length? visible.map(tk=>taskRow(sec,tk,sec.tasks.indexOf(tk)+1)).join('') :
           `<div class="empty">${sec.tasks.length?'No tasks match filters.':'No tasks yet.'}</div>`}
         <div class="add-task-row">
           <input placeholder="Add a task to ${esc(sec.name)}…" onkeydown="if(event.key==='Enter')addTask('${sec.id}',this)">
@@ -511,7 +522,7 @@ function renderBoard(){
   });
 }
 
-function taskRow(sec,tk){
+function taskRow(sec,tk,rank){
   const st=STATUSES[tk.status];
   const done = tk.status==='blue';
   const opts=Object.entries(STATUSES).map(([k,v])=>
@@ -536,8 +547,15 @@ function taskRow(sec,tk){
         <span class="cmt-as" onclick="changeName()" title="Change your display name">as ${me} ✎</span>
       </div>
     </div>` : '';
-  return `<div class="task-wrap">
+  return `<div class="task-wrap" draggable="true"
+      ondragstart="taskDragStart(event,'${sec.id}','${tk.id}')"
+      ondragover="taskDragOver(event,'${sec.id}','${tk.id}')"
+      ondragleave="taskDragLeave(event)"
+      ondrop="taskDrop(event,'${sec.id}','${tk.id}')"
+      ondragend="taskDragEnd()">
     <div class="task s-${tk.status}${done?' done':''}">
+      <span class="drag-handle" title="Drag to reorder">⠿</span>
+      <span class="t-rank">${rank}</span>
       <span class="badge ${st.cls}">${st.label}</span>
       <span class="t-name"><span class="t-name-edit" title="Double-click to edit"
           onclick="event.stopPropagation()"
@@ -563,6 +581,41 @@ function taskRow(sec,tk){
     </div>
     ${thread}
   </div>`;
+}
+
+/* ---------- drag-to-rank ---------- */
+let dragSrc = null;
+function taskDragStart(e,sid,tid){
+  dragSrc={sid,tid};
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>e.currentTarget.classList.add('dragging'),0);
+}
+function taskDragOver(e,sid,tid){
+  e.preventDefault();
+  if(!dragSrc||dragSrc.sid!==sid||dragSrc.tid===tid)return;
+  e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.task-wrap.drag-over').forEach(el=>el.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
+}
+function taskDragLeave(e){
+  if(!e.currentTarget.contains(e.relatedTarget))e.currentTarget.classList.remove('drag-over');
+}
+function taskDrop(e,sid,tid){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if(!dragSrc||dragSrc.sid!==sid||dragSrc.tid===tid)return;
+  const sec=findSection(sid);
+  const from=sec.tasks.findIndex(t=>t.id===dragSrc.tid);
+  const to=sec.tasks.findIndex(t=>t.id===tid);
+  if(from===-1||to===-1)return;
+  const [task]=sec.tasks.splice(from,1);
+  sec.tasks.splice(to,0,task);
+  dragSrc=null; save(); render();
+}
+function taskDragEnd(){
+  document.querySelectorAll('.task-wrap.dragging,.task-wrap.drag-over')
+    .forEach(el=>el.classList.remove('dragging','drag-over'));
+  dragSrc=null;
 }
 
 /* ---------- mutations ---------- */
