@@ -110,6 +110,12 @@
   .t-name-edit{padding:1px 5px;border-radius:4px;cursor:text}
   .t-name-edit:hover{box-shadow:inset 0 0 0 1px var(--line)}
   .t-name-edit.editing{background:var(--bg);box-shadow:inset 0 0 0 1px var(--accent);cursor:text}
+  .t-date{font-size:12px;padding:4px 7px;border-radius:6px;background:var(--panel);border:1px solid var(--line);
+    color:var(--muted);width:138px;cursor:pointer}
+  .t-date:hover{border-color:var(--accent)}
+  .t-date::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer}
+  .t-date.overdue{border-color:var(--red)!important;color:var(--red)!important}
+  .t-date.soon{border-color:var(--yellow)!important;color:var(--yellow)!important}
   .owner-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap}
   .owner-select{font-size:11px;padding:3px 6px;border-radius:6px;background:var(--panel);
     border:1px solid var(--line);color:var(--muted);max-width:130px;cursor:pointer}
@@ -251,6 +257,7 @@
         <option value="blue">⬤ Done</option>
       </select>
     </div>
+    <div class="row"><label>Completion date</label><input type="date" id="taskDueDate"></div>
     <div class="actions">
       <button class="ghost" onclick="closeModal('taskModal')">Cancel</button>
       <button class="primary" onclick="saveTask()">Save</button>
@@ -319,7 +326,14 @@ const SEED = {
 };
 
 function uid(){return Math.random().toString(36).slice(2,10)}
-function t(name, team, note){return {id:uid(), name, team:team||'Unassigned', note:note||'', status:'gray', comments:[]}}
+function t(name, team, note){return {id:uid(), name, team:team||'Unassigned', note:note||'', status:'gray', dueDate:'', comments:[]}}
+function dueDateCls(d){
+  if(!d) return '';
+  const diff=(new Date(d)-new Date(new Date().toDateString()))/86400000;
+  if(diff<0) return ' overdue';
+  if(diff<=7) return ' soon';
+  return '';
+}
 
 let data = JSON.parse(JSON.stringify(SEED));   // placeholder until init() resolves
 
@@ -534,6 +548,9 @@ function taskRow(sec,tk){
         <select class="owner-select" onchange="setOwner('${sec.id}','${tk.id}',this.value)">
           ${(data.teams.includes(tk.team)?data.teams:[tk.team,...data.teams]).map(tm=>`<option ${tm===tk.team?'selected':''}>${esc(tm)}</option>`).join('')}
         </select></span>
+      <input type="date" class="t-date${dueDateCls(tk.dueDate||'')}" value="${tk.dueDate||''}"
+        onchange="setDueDate('${sec.id}','${tk.id}',this.value)"
+        title="${tk.dueDate?'Due: '+tk.dueDate:'Set completion date'}">
       <button class="cmt-btn${cs.length?' has':''}${open?' open':''}" onclick="toggleComments('${tk.id}')" title="Show / hide comments">💬 ${cs.length}</button>
       <select class="status-select" onchange="setStatus('${sec.id}','${tk.id}',this.value)">${opts}</select>
       <div class="t-actions">
@@ -554,6 +571,7 @@ function findTask(sid,tid){const s=findSection(sid);return s&&s.tasks.find(t=>t.
 
 function setStatus(sid,tid,val){const tk=findTask(sid,tid);if(tk){tk.status=val;save();render()}}
 function setOwner(sid,tid,val){const tk=findTask(sid,tid);if(tk){tk.team=val;save();render()}}
+function setDueDate(sid,tid,val){const tk=findTask(sid,tid);if(tk){tk.dueDate=val;save();render()}}
 
 /* inline task-name editing (double-click on the board) */
 function startEditTaskName(e,sid,tid){
@@ -633,6 +651,7 @@ function editTask(sid,tid){
   const ts=document.getElementById('taskTeam');
   ts.innerHTML=data.teams.map(tm=>`<option ${tm===tk.team?'selected':''}>${esc(tm)}</option>`).join('');
   document.getElementById('taskStatus').value=tk.status;
+  document.getElementById('taskDueDate').value=tk.dueDate||'';
   openModal('taskModal');
 }
 function saveTask(){
@@ -641,6 +660,7 @@ function saveTask(){
   tk.note=document.getElementById('taskNote').value.trim();
   tk.team=document.getElementById('taskTeam').value;
   tk.status=document.getElementById('taskStatus').value;
+  tk.dueDate=document.getElementById('taskDueDate').value;
   closeModal('taskModal');save();render();
 }
 
